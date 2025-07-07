@@ -187,80 +187,96 @@
     &copy; 2025 QA Interview Tracker | Разверните проект на GitHub Pages
   </div>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js "></script>
-  <!-- SheetJS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js "></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js "></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js "></script>
 
-  <script>
-    const ctx = document.getElementById('chart').getContext('2d');
-    let chart;
+<script>
+  const ctx = document.getElementById('chart').getContext('2d');
+  let chart;
 
-    function updateChart(correct, incorrect) {
-      if (chart) chart.destroy();
-      chart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: ['Правильные', 'Неправильные'],
-          datasets: [{
-            label: 'Результаты собеседования',
-            data: [correct, incorrect],
-            backgroundColor: ['#4CAF50', '#F44336']
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'top' },
-            title: { display: true, text: 'Процент правильных ответов' }
-          }
+  function updateChart(correct, incorrect) {
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: ['Правильные', 'Неправильные'],
+        datasets: [{
+          label: 'Результаты собеседования',
+          data: [correct, incorrect],
+          backgroundColor: ['#4CAF50', '#F44336']
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top' },
+          title: { display: true, text: 'Процент правильных ответов' }
+        }
+      }
+    });
+  }
+
+  function calculateResults() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    let correct = 0, incorrect = 0;
+
+    checkboxes.forEach((cb, index) => {
+      if (cb.checked) {
+        if (index % 3 === 1) correct++;
+        if (index % 3 === 2) incorrect++;
+      }
+    });
+
+    updateChart(correct, incorrect);
+    return { correct, incorrect };
+  }
+
+  function exportToExcel() {
+    const table = document.getElementById('interview-table');
+    const rows = Array.from(table.querySelectorAll("tr"));
+    const data = [];
+    let { correct, incorrect } = calculateResults();
+
+    rows.forEach(row => {
+      const cells = row.querySelectorAll("td, th");
+      if (cells.length === 0) return;
+
+      const rowData = [];
+      cells.forEach((cell, index) => {
+        if (index === 1 || index === 2) {
+          const checkbox = cell.querySelector("input");
+          const checked = checkbox && checkbox.checked;
+          rowData.push(checked ? "✔️" : "");
+        } else {
+          rowData.push(cell.innerText.trim());
         }
       });
-    }
 
-    function exportToExcel() {
-      const table = document.getElementById('interview-table');
-      const rows = Array.from(table.querySelectorAll("tr"));
-      const data = [];
-      let correct = 0, incorrect = 0;
+      data.push(rowData);
+    });
 
-      rows.forEach(row => {
-        const cells = row.querySelectorAll("td, th");
-        if (cells.length === 0) return;
+    data.push(["", "", ""]);
+    data.push(["Статистика", "", ""]);
+    data.push(["Правильных ответов:", correct, ""]);
+    data.push(["Неправильных ответов:", incorrect, ""]);
+    data.push(["Процент успешных:", `${Math.round(correct / (correct + incorrect) * 100)}%`, ""]);
 
-        const rowData = [];
-        cells.forEach((cell, index) => {
-          if (index === 1 || index === 2) {
-            const checkbox = cell.querySelector("input");
-            const checked = checkbox && checkbox.checked;
-            if (index === 1 && checked) correct++;
-            if (index === 2 && checked) incorrect++;
-            rowData.push(checked ? "✔️" : "");
-          } else {
-            rowData.push(cell.innerText.trim());
-          }
-        });
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Результаты");
 
-        data.push(rowData);
-      });
+    XLSX.writeFile(wb, "QA_Interview_Results.xlsx");
+  }
 
-      // Добавляем статистику
-      data.push(["", "", ""]);
-      data.push(["Статистика", "", ""]);
-      data.push(["Правильных ответов:", correct, ""]);
-      data.push(["Неправильных ответов:", incorrect, ""]);
-      data.push(["Процент успешных:", `${Math.round(correct / (correct + incorrect) * 100)}%`, ""]);
-
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Результаты");
-
-      XLSX.writeFile(wb, "QA_Interview_Results.xlsx");
-
-      // Обновляем график
-      updateChart(correct, incorrect);
-    }
-  </script>
+  // Добавляем слушатели на чекбоксы
+  window.addEventListener('DOMContentLoaded', () => {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', calculateResults);
+    });
+    calculateResults(); // Инициализация графика
+  });
+</script>
 
 </body>
 </html>
