@@ -45,10 +45,8 @@
 
     .controls {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       margin-top: 30px;
-      flex-wrap: wrap;
-      gap: 10px;
     }
 
     button {
@@ -65,6 +63,12 @@
       background-color: #005fa3;
     }
 
+    canvas {
+      display: block;
+      margin: 40px auto;
+      max-width: 400px;
+    }
+
     .footer {
       text-align: center;
       margin-top: 40px;
@@ -78,6 +82,7 @@
   <h1>Интервью QA Middle</h1>
 
   <table id="interview-table">
+    <!-- Блок 1: Основы тестирования -->
     <thead>
       <tr>
         <th>Вопрос</th>
@@ -172,23 +177,52 @@
     </tbody>
   </table>
 
+  <canvas id="chart" width="400" height="400"></canvas>
+
   <div class="controls">
     <button onclick="exportToExcel()">Сформировать результат (Excel)</button>
-    <a href="https://docs.google.com/spreadsheets/d/1aB... " target="_blank" style="color: #0077cc; text-decoration: underline;">Открыть Google Таблицу</a>
   </div>
 
   <div class="footer">
     &copy; 2025 QA Interview Tracker | Разверните проект на GitHub Pages
   </div>
 
-  <!-- SheetJS библиотека для экспорта в Excel -->
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js "></script>
+  <!-- SheetJS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js "></script>
 
   <script>
+    const ctx = document.getElementById('chart').getContext('2d');
+    let chart;
+
+    function updateChart(correct, incorrect) {
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ['Правильные', 'Неправильные'],
+          datasets: [{
+            label: 'Результаты собеседования',
+            data: [correct, incorrect],
+            backgroundColor: ['#4CAF50', '#F44336']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: true, text: 'Процент правильных ответов' }
+          }
+        }
+      });
+    }
+
     function exportToExcel() {
       const table = document.getElementById('interview-table');
       const rows = Array.from(table.querySelectorAll("tr"));
       const data = [];
+      let correct = 0, incorrect = 0;
 
       rows.forEach(row => {
         const cells = row.querySelectorAll("td, th");
@@ -198,7 +232,10 @@
         cells.forEach((cell, index) => {
           if (index === 1 || index === 2) {
             const checkbox = cell.querySelector("input");
-            rowData.push(checkbox && checkbox.checked ? "✔️" : "❌");
+            const checked = checkbox && checkbox.checked;
+            if (index === 1 && checked) correct++;
+            if (index === 2 && checked) incorrect++;
+            rowData.push(checked ? "✔️" : "");
           } else {
             rowData.push(cell.innerText.trim());
           }
@@ -207,12 +244,21 @@
         data.push(rowData);
       });
 
+      // Добавляем статистику
+      data.push(["", "", ""]);
+      data.push(["Статистика", "", ""]);
+      data.push(["Правильных ответов:", correct, ""]);
+      data.push(["Неправильных ответов:", incorrect, ""]);
+      data.push(["Процент успешных:", `${Math.round(correct / (correct + incorrect) * 100)}%`, ""]);
+
       const ws = XLSX.utils.aoa_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Результаты");
 
-      // Генерируем файл
       XLSX.writeFile(wb, "QA_Interview_Results.xlsx");
+
+      // Обновляем график
+      updateChart(correct, incorrect);
     }
   </script>
 
