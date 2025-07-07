@@ -202,7 +202,7 @@
         labels: ['Правильные', 'Неправильные'],
         datasets: [{
           label: 'Результаты собеседования',
-          data: [correct, incorrect],
+           [correct, incorrect],
           backgroundColor: ['#4CAF50', '#F44336']
         }]
       },
@@ -217,13 +217,22 @@
   }
 
   function calculateResults() {
-    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    const rows = document.querySelectorAll("#interview-table tbody tr");
     let correct = 0, incorrect = 0;
 
-    checkboxes.forEach((cb, index) => {
-      if (cb.checked) {
-        if (index % 3 === 1) correct++;
-        if (index % 3 === 2) incorrect++;
+    rows.forEach(row => {
+      const cells = row.querySelectorAll("td");
+      if (cells.length < 3) return;
+
+      const plusCb = cells[1].querySelector("input[type='checkbox']");
+      const minusCb = cells[2].querySelector("input[type='checkbox']");
+
+      if (plusCb.checked) {
+        correct++;
+        minusCb.checked = false; // Автоматически снимаем минус
+      } else if (minusCb.checked) {
+        incorrect++;
+        plusCb.checked = false; // Автоматически снимаем плюс
       }
     });
 
@@ -268,15 +277,30 @@
     XLSX.writeFile(wb, "QA_Interview_Results.xlsx");
   }
 
-  // Добавляем слушатели на чекбоксы
+  // Добавляем обработчики событий
   window.addEventListener('DOMContentLoaded', () => {
-    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach(cb => {
-      cb.addEventListener('change', calculateResults);
+    const rows = document.querySelectorAll("#interview-table tbody tr");
+
+    rows.forEach(row => {
+      const cells = row.querySelectorAll("td");
+      if (cells.length < 3) return;
+
+      const plusCb = cells[1].querySelector("input[type='checkbox']");
+      const minusCb = cells[2].querySelector("input[type='checkbox']");
+
+      if (plusCb && minusCb) {
+        plusCb.addEventListener('change', () => {
+          if (plusCb.checked) minusCb.checked = false;
+          calculateResults();
+        });
+
+        minusCb.addEventListener('change', () => {
+          if (minusCb.checked) plusCb.checked = false;
+          calculateResults();
+        });
+      }
     });
+
     calculateResults(); // Инициализация графика
   });
 </script>
-
-</body>
-</html>
